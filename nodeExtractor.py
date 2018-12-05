@@ -1,8 +1,6 @@
 import csv
-import s2sphere
-
-# https://s2sphere.readthedocs.io/en/latest/index.html
-
+import s2sphere  # https://s2sphere.readthedocs.io/en/latest/index.html
+import math
 
 # defining the south-west and north-east border edges of the rectangle, which contains the district of Zurich
 # southWest = s2sphere.LatLng.from_degrees(47.320203, 8.448083)
@@ -12,7 +10,20 @@ import s2sphere
 southWest = s2sphere.LatLng.from_degrees(0, 0)
 northEast = s2sphere.LatLng.from_degrees(90, 180)
 
+# defining the rectangle
 rectangleZurichDistrict = s2sphere.LatLngRect.from_point_pair(southWest, northEast)
+
+# defining the center of the city of Zurich and the radius of the cap to be drawn around it
+center = s2sphere.LatLng.from_degrees(47.37174, 8.54226)
+radius = 5500
+
+EARTH_RADIUS = 6371000
+
+# converting the radius into the Angle format
+angleRadius = s2sphere.Angle.from_degrees(360*radius/(2*math.pi*EARTH_RADIUS))
+
+# defining the cap
+capAroundZurich = s2sphere.Cap.from_axis_angle(center.to_point(), angleRadius)
 
 
 class PacketTransmission:
@@ -24,12 +35,12 @@ class PacketTransmission:
 		self.lon = lon
 
 
-# Initializing the dictionary, which will hold all Transmission-objects per key (= nodeaddr)
+# initializing the dictionary, which will hold all Transmission-objects per key (= nodeaddr)
 packetDict = {}
 
-# Parsing the .csv-file
-# TODO: change file to actual DB dump
-with open('test.csv', 'r', encoding='unicode_escape') as csv_file:
+# parsing the .csv-file
+# for testing, use 'test.csv' as well as 'rectangleZurichDistrict' @ line 54
+with open('packets.csv', 'r', encoding='unicode_escape') as csv_file:
 	csv_reader = csv.reader(csv_file)
 
 	# skipping the first line (fieldnames)
@@ -37,9 +48,10 @@ with open('test.csv', 'r', encoding='unicode_escape') as csv_file:
 
 	for line in csv_reader:
 		# building a temporary point at the lat./lon.-position of the looked-at packet transmission
-		tempPoint = s2sphere.LatLng.from_degrees(float(line[10]), float(line[11]))
-		# checking, if the point is contained in the defined rectangle
-		if rectangleZurichDistrict.contains(tempPoint):
+		tempPoint = s2sphere.LatLng.from_degrees(float(line[10]), float(line[11])).to_point()
+		# checking, if the point is contained in the defined shape
+		# only use 'capAroundZurich' with actual .csv-dump, for testing, use 'rectangleZurichDistrict' and 'test.csv'
+		if capAroundZurich.contains(tempPoint):
 			# if for a given nodeaddr no key in packetDict exists yet, initialize an empty list at this key (line[2])
 			if not (line[2] in packetDict):
 				packetDict[line[2]] = []
