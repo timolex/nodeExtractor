@@ -2,7 +2,7 @@ import csv
 import s2sphere  # https://s2sphere.readthedocs.io/en/latest/index.html
 import math
 import datetime
-
+import matplotlib.pyplot as plot
 # defining the south-west and north-east border edges of the rectangle, which contains the district of Zurich
 # southWest = s2sphere.LatLng.from_degrees(47.320203, 8.448083)
 # northEast = s2sphere.LatLng.from_degrees(47.434676, 8.625388)
@@ -86,3 +86,6 @@ while packetCount < len(tempNode) and secondCount <= timeDiff:
 		periodicityTable.append(0)
 	secondCount = secondCount + 1
 print(periodicityTable)
+
+plot.plot(periodicityTable)
+plot.show()
