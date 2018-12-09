@@ -4,9 +4,10 @@ import math
 import datetime
 import numpy
 import matplotlib.pyplot as plot
+import time
 
 # 'program parameters:'
-USE_TEST_CSV = True
+TESTING_MODE = True
 USE_PERIODICITY_TABLE = False
 MINIMUM_PEAK_TO_TRANSMISSIONS_RATIO = 0.4
 # this value has to be at least 2 for fft to work properly
@@ -14,7 +15,7 @@ MINIMUM_NO_OF_PACKETS_SENT = 5
 
 EARTH_RADIUS = 6371000
 
-if USE_TEST_CSV:
+if TESTING_MODE:
 	# setting the filename
 	filename = "test.csv"
 
@@ -50,6 +51,9 @@ class PacketTransmission:
 
 # initializing the dictionary, which will hold all Transmission-objects per key (= nodeaddr)
 nodeDict = {}
+
+# starting the timer
+time_start = time.clock()
 
 # parsing the .csv-file
 with open(filename, 'r', encoding='unicode_escape') as csv_file:
@@ -129,7 +133,7 @@ for node in nodeDict:
 			nodesToRemove.append(node)
 
 		# plotting a good example of test.csv
-		if USE_TEST_CSV and node == 'skylabmapper3':
+		if TESTING_MODE and node == 'skylabmapper3':
 			if USE_PERIODICITY_TABLE:
 				plot.plot(periodicityTable)
 				plot.title("periodicityTable")
@@ -160,6 +164,9 @@ for node in nodeDict:
 for node in nodesToRemove:
 	nodeDict.pop(node)
 
+# stopping the timer:
+time_stop = time.clock()
+
 # printing all keys (nodeaddr)
 print('')
 for i in nodeDict:
@@ -167,3 +174,6 @@ for i in nodeDict:
 
 # printing the number of found end devices in the area
 print("\n# of found suitable end devices in the defined area: " + str(len(nodeDict)))
+
+# printing the execution time
+print("\n\nexecution time: " + str(time_stop - time_start))
