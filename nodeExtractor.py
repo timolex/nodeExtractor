@@ -131,6 +131,8 @@ for node in nodeDict:
 		if ratio < MINIMUM_PEAK_TO_TRANSMISSIONS_RATIO:
 			print('To be removed: ' + node + ' (reason: peak/transmissions-ratio too low: ' + str(ratio) + ')')
 			nodesToRemove.append(node)
+		else:
+			print(node + ' maximum peak at ' + str(numpy.argmax(fftSinTable)) + ' seconds')
 
 		# plotting a good example of test.csv
 		if TESTING_MODE and node == 'skylabmapper3':
