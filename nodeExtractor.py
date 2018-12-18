@@ -5,6 +5,7 @@ import datetime
 import numpy
 import matplotlib.pyplot as plot
 import time
+import pyproj as proj
 
 # 'program parameters:'
 TESTING_MODE = True
@@ -165,6 +166,19 @@ for node in nodeDict:
 # removing all non-periodically-sending nodes from the nodeDict
 for node in nodesToRemove:
 	nodeDict.pop(node)
+
+print('')
+
+# setting up projections (according to Coordinate Reference Systems WGS84 (lat.-lon.) and CH1903 (Switzerland))
+proj_WGS84 = proj.Proj(init='epsg:4326')
+proj_CH1903 = proj.Proj(init='epsg:21781')
+
+# iterating over nodeDict, converting coordinates to epsg:21781-projection
+for node in nodeDict:
+	lon = nodeDict[node].__getitem__(0).__getattribute__('lon')
+	lat = nodeDict[node].__getitem__(0).__getattribute__('lat')
+	x, y = proj.transform(proj_WGS84, proj_CH1903, lon, lat)
+	print(node + ' x: ' + str(x) + ', y: ' + str(y))
 
 # stopping the timer:
 time_stop = time.clock()
