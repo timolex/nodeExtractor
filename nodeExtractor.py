@@ -97,7 +97,7 @@ for node in nodeDict:
 					periodicityTable.append(1)
 					# skipping packetTransmissions in the same second
 					while packetCount < len(nodeDict[node]) and \
-						startSecond + secondCount == nodeDict[node].__getitem__(packetCount).time_stamp:
+							startSecond + secondCount == nodeDict[node].__getitem__(packetCount).time_stamp:
 						packetCount = packetCount + 1
 				else:
 					# appending 0 to the periodicityTable if no transmission happened at current second
@@ -133,10 +133,12 @@ for node in nodeDict:
 			print('To be removed: ' + node + ' (reason: peak/transmissions-ratio too low: ' + str(ratio) + ')')
 			nodesToRemove.append(node)
 		else:
-			print(node + ' maximum peak at ' + str(len(sinePeriodicity) / numpy.argmax(fftSinTable)) + ' seconds')
+			# printing the peak periodicity (by converting the found peak frequency)
+			print('Node ' + node + ' is most regularly transmitting all '
+									+ str(len(sinePeriodicity) / numpy.argmax(fftSinTable)) + ' seconds.')
 
-		# plotting a good example of test.csv
-		if TESTING_MODE and node == 'skylabmapper3':
+		# plotting a good example:
+		if node == 'cov_ursmii_01':
 			if USE_PERIODICITY_TABLE:
 				plot.plot(periodicityTable)
 				plot.title("periodicityTable")
@@ -167,13 +169,20 @@ for node in nodeDict:
 for node in nodesToRemove:
 	nodeDict.pop(node)
 
+# printing the number of found end devices in the area
+print("\n# of found suitable end devices in the defined area: " + str(len(nodeDict)))
+
+# printing all keys (nodeaddr)
 print('')
+for i in nodeDict:
+	print("To be considered \"" + i + "\", number of packets: " + str(len(nodeDict[i])))
 
 # setting up projections (according to Coordinate Reference Systems WGS84 (lat.-lon.) and CH1903 (Switzerland))
 proj_WGS84 = proj.Proj(init='epsg:4326')
-proj_CH1903 = proj.Proj(init='epsg:21781')
+proj_CH1903 = proj.Proj(init='epsg:21781')  # http://epsg.io/21781
 
 # iterating over nodeDict, converting coordinates to epsg:21781-projection
+print('')
 for node in nodeDict:
 	lon = nodeDict[node].__getitem__(0).__getattribute__('lon')
 	lat = nodeDict[node].__getitem__(0).__getattribute__('lat')
@@ -182,14 +191,6 @@ for node in nodeDict:
 
 # stopping the timer:
 time_stop = time.clock()
-
-# printing all keys (nodeaddr)
-print('')
-for i in nodeDict:
-	print("To be considered \"" + i + "\", number of packets: " + str(len(nodeDict[i])))
-
-# printing the number of found end devices in the area
-print("\n# of found suitable end devices in the defined area: " + str(len(nodeDict)))
 
 # printing the execution time
 print("\n\nexecution time: " + str(time_stop - time_start))
