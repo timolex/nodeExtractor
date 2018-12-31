@@ -7,9 +7,9 @@ import matplotlib.pyplot as plot
 import time
 import pyproj as proj
 
-# 'program parameters:'
+# general parameters
 TESTING_MODE = False
-MINIMUM_PEAK_TO_TRANSMISSIONS_RATIO = 0.5
+MINIMUM_PEAK_TO_TRANSMISSIONS_RATIO = 0.4
 # this value has to be at least 2 for fft to work properly
 MINIMUM_NO_OF_PACKETS_SENT = 100
 # criterion for filtering out short-living nodes
@@ -22,6 +22,11 @@ UPPER_BOUND_PERIODICITY = 7200  # 2h in seconds
 LOWER_BOUND_PERIODICITY = 1209600  # 2 weeks in seconds
 
 EARTH_RADIUS = 6371000
+
+# setting up projections (according to Coordinate Reference Systems WGS84 (lat.-lon.) and CH1903 (Switzerland))
+proj_WGS84 = proj.Proj(init='epsg:4326')
+proj_CH1903 = proj.Proj(init='epsg:21781')  # http://epsg.io/21781
+
 
 if TESTING_MODE:
 	# setting the filename
@@ -38,7 +43,8 @@ else:
 	filename = "1M.csv"
 
 	# defining the center of the city of Zurich and the radius of the cap to be drawn around it
-	centerOfZurich = s2sphere.LatLng.from_degrees(47.37174, 8.54226)
+	ZurichLon, ZurichLat = 8.54226, 47.37174
+	centerOfZurich = s2sphere.LatLng.from_degrees(ZurichLat, ZurichLon)
 	radius = 5500
 
 	# converting the radius into the Angle format
@@ -46,6 +52,12 @@ else:
 
 	# defining the cap
 	region = s2sphere.Cap.from_axis_angle(centerOfZurich.to_point(), angleRadius)
+
+	# converting Zurich's WGS84-coordinates (EPSG 4326) to CH1903 (EPSG 21781)
+	ZurichX, ZurichY = proj.transform(proj_WGS84, proj_CH1903, ZurichLon, ZurichLat)
+
+	# calculating the offsets used for normalization of the cartesian coordinate system
+	offsetX, offsetY = ZurichX - radius, ZurichY - radius
 
 
 class PacketTransmission:
@@ -242,22 +254,24 @@ for i in keptNodesMethodMostafa:
 	print("To be considered \"" + i + "\", number of packets: " + str(len(keptNodesMethodMostafa[i])))
 
 
-# setting up projections (according to Coordinate Reference Systems WGS84 (lat.-lon.) and CH1903 (Switzerland))
-proj_WGS84 = proj.Proj(init='epsg:4326')
-proj_CH1903 = proj.Proj(init='epsg:21781')  # http://epsg.io/21781
-
 # iterating over keptNodesMethodTimo, converting coordinates to epsg:21781-projection
 print('')
 for node in keptNodesMethodTimo:
+	print('Considerable nodes sending most frequently at one peak periodicity:')
 	lon = keptNodesMethodTimo[node].__getitem__(0).__getattribute__('lon')
 	lat = keptNodesMethodTimo[node].__getitem__(0).__getattribute__('lat')
 	x, y = proj.transform(proj_WGS84, proj_CH1903, lon, lat)
+	x, y = x - offsetX, y - offsetY
 	print(node + ' x: ' + str(x) + ', y: ' + str(y))
 
+print('')
+
 for node in keptNodesMethodMostafa:
+	print('Considerable nodes sending frequently at several periodicities:')
 	lon = keptNodesMethodMostafa[node].__getitem__(0).__getattribute__('lon')
 	lat = keptNodesMethodMostafa[node].__getitem__(0).__getattribute__('lat')
 	x, y = proj.transform(proj_WGS84, proj_CH1903, lon, lat)
+	x, y = x - offsetX, y - offsetY
 	print(node + ' x: ' + str(x) + ', y: ' + str(y))
 
 
