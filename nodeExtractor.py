@@ -8,18 +8,21 @@ import time
 import pyproj as proj
 
 # general parameters
-TESTING_MODE = False
-MINIMUM_PEAK_TO_TRANSMISSIONS_RATIO = 0.4
-# this value has to be at least 2 for fft to work properly
+
+# minimum frequency-peak to number-of-transmissions rate used in Timo's method
+MINIMUM_PEAK_TO_TRANSMISSIONS_RATIO = 0.5
+# following value has to be at least 2 for fft to work properly
 MINIMUM_NO_OF_PACKETS_SENT = 100
 # criterion for filtering out short-living nodes
-# This value must be in between the periodicity boundaries used for Mostafa's method
+# This value must be greater than the upper bound periodicity used for Mostafa's method
 # MINIMUM_LIFESPAN = 2592000 # 30 days in seconds
 # MINIMUM_LIFESPAN = 86400  # 24h in seconds
 MINIMUM_LIFESPAN = 8000  # for testing
 # periodicity boundaries used for the frequency cutoff in Mostafa's method
 UPPER_BOUND_PERIODICITY = 7200  # 2h in seconds
 LOWER_BOUND_PERIODICITY = 1209600  # 2 weeks in seconds
+# minimum percentage of intervals which have to be successfully checked back in Mostafa's method
+MINIMUM_INTERVAL_PERCENTAGE = 0.8
 
 EARTH_RADIUS = 6371000
 
@@ -27,37 +30,25 @@ EARTH_RADIUS = 6371000
 proj_WGS84 = proj.Proj(init='epsg:4326')
 proj_CH1903 = proj.Proj(init='epsg:21781')  # http://epsg.io/21781
 
+# setting the filename
+filename = "1M.csv"
 
-if TESTING_MODE:
-	# setting the filename
-	filename = "test.csv"
+# defining the center of the city of Zurich and the radius of the cap to be drawn around it
+ZurichLon, ZurichLat = 8.54226, 47.37174
+centerOfZurich = s2sphere.LatLng.from_degrees(ZurichLat, ZurichLon)
+radius = 10000
 
-	# mock values to work with test.csv
-	southWest = s2sphere.LatLng.from_degrees(0, 0)
-	northEast = s2sphere.LatLng.from_degrees(90, 180)
+# converting the radius into the Angle format
+angleRadius = s2sphere.Angle.from_degrees(360 * radius / (2 * math.pi * EARTH_RADIUS))
 
-	# defining a mock rectangle for testing
-	region = s2sphere.LatLngRect.from_point_pair(southWest, northEast)
-else:
-	# setting the filename
-	filename = "1M.csv"
+# defining the cap
+region = s2sphere.Cap.from_axis_angle(centerOfZurich.to_point(), angleRadius)
 
-	# defining the center of the city of Zurich and the radius of the cap to be drawn around it
-	ZurichLon, ZurichLat = 8.54226, 47.37174
-	centerOfZurich = s2sphere.LatLng.from_degrees(ZurichLat, ZurichLon)
-	radius = 5500
+# converting Zurich's WGS84-coordinates (EPSG 4326) to CH1903 (EPSG 21781)
+ZurichX, ZurichY = proj.transform(proj_WGS84, proj_CH1903, ZurichLon, ZurichLat)
 
-	# converting the radius into the Angle format
-	angleRadius = s2sphere.Angle.from_degrees(360 * radius / (2 * math.pi * EARTH_RADIUS))
-
-	# defining the cap
-	region = s2sphere.Cap.from_axis_angle(centerOfZurich.to_point(), angleRadius)
-
-	# converting Zurich's WGS84-coordinates (EPSG 4326) to CH1903 (EPSG 21781)
-	ZurichX, ZurichY = proj.transform(proj_WGS84, proj_CH1903, ZurichLon, ZurichLat)
-
-	# calculating the offsets used for normalization of the cartesian coordinate system
-	offsetX, offsetY = ZurichX - radius, ZurichY - radius
+# calculating the offsets used for normalization of the cartesian coordinate system
+offsetX, offsetY = ZurichX - radius, ZurichY - radius
 
 
 class PacketTransmission:
@@ -213,21 +204,24 @@ for node in remainderMethodTimo:
 	peakPeriodicity = int(round(timeSpan / peakFrequencyX))
 
 	# checking back, if found peakPeriodicity appears frequently in periodicityTable
-	intervalIndex = 0
-	intervalCounter = 0
+	intervalSecond = 0
+	transmissionCounter = 0
 	intervalCountList = []
 	for j in range(len(periodicityTable)):
 		if periodicityTable[j] == 1:
-			intervalCounter = intervalCounter + 1
-		if intervalIndex == peakPeriodicity - 1:
-			if intervalCounter != 0:
-				intervalCountList.append(intervalCounter)
-			intervalIndex = 0
-			intervalCounter = 0
-		intervalIndex = intervalIndex + 1
+			transmissionCounter = transmissionCounter + 1
+		# determining, if already a whole interval (according to peakPeriodicity) has been checked
+		if intervalSecond == peakPeriodicity - 1:
+			# only consider the interval, if at least one transmission appeared within it
+			if transmissionCounter > 0:
+				intervalCountList.append(transmissionCounter)
+			# resetting both the (inter-) intervalSecond as well as the transmissionCounter
+			intervalSecond = 0
+			transmissionCounter = 0
+		intervalSecond = intervalSecond + 1
 
-	# keep the node, if for at least 0.7% of the intervals (acc. to peakPeriodicity) there appeared transmissions
-	if len(intervalCountList) > 0.7 * peakFrequencyX:
+	# keep the node, if at least the specified percentage of intervals were checked back positively for transmissions
+	if len(intervalCountList) > MINIMUM_INTERVAL_PERCENTAGE * peakFrequencyX:
 		print('Node ' + node + ' has been verified to be transmitting regularly all '
 								+ str(peakPeriodicity) + ' seconds.')
 		keptNodesMethodMostafa[node] = remainderMethodTimo[node]
@@ -243,36 +237,24 @@ for node in remainderMethodTimo:
 print("\n# of found suitable end devices in the defined area: " + str(len(keptNodesMethodTimo)
 						+ len(keptNodesMethodMostafa) + len(keptNodesMethodMachineLearning)))
 
-# printing nodes with regular traffic (after Timo's method)
-print('')
-for i in keptNodesMethodTimo:
-	print("To be considered \"" + i + "\", number of packets: " + str(len(keptNodesMethodTimo[i])))
-
-# printing nodes with regular traffic (after Mostafa's method)
-print('')
-for i in keptNodesMethodMostafa:
-	print("To be considered \"" + i + "\", number of packets: " + str(len(keptNodesMethodMostafa[i])))
-
 
 # iterating over keptNodesMethodTimo, converting coordinates to epsg:21781-projection
-print('')
+print('\nConsiderable nodes sending most frequently at one peak periodicity:')
 for node in keptNodesMethodTimo:
-	print('Considerable nodes sending most frequently at one peak periodicity:')
 	lon = keptNodesMethodTimo[node].__getitem__(0).__getattribute__('lon')
 	lat = keptNodesMethodTimo[node].__getitem__(0).__getattribute__('lat')
 	x, y = proj.transform(proj_WGS84, proj_CH1903, lon, lat)
 	x, y = x - offsetX, y - offsetY
-	print(node + ' x: ' + str(x) + ', y: ' + str(y))
+	print(node + ' x: ' + str(x) + ', y: ' + str(y) + "; number of packets: " + str(len(keptNodesMethodTimo[node])))
 
-print('')
 
+print('\nConsiderable nodes sending frequently at several periodicities:')
 for node in keptNodesMethodMostafa:
-	print('Considerable nodes sending frequently at several periodicities:')
 	lon = keptNodesMethodMostafa[node].__getitem__(0).__getattribute__('lon')
 	lat = keptNodesMethodMostafa[node].__getitem__(0).__getattribute__('lat')
 	x, y = proj.transform(proj_WGS84, proj_CH1903, lon, lat)
 	x, y = x - offsetX, y - offsetY
-	print(node + ' x: ' + str(x) + ', y: ' + str(y))
+	print(node + ' x: ' + str(x) + ', y: ' + str(y) + "; number of packets: " + str(len(keptNodesMethodMostafa[node])))
 
 
 # stopping the timer:
