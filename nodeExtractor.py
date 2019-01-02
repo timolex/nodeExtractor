@@ -140,8 +140,8 @@ for node in keptNodesLifespanCheck:
 		# printing the peak periodicity (by converting the found peak frequency)
 		print('Node ' + node + ' is most regularly transmitting all '
 								+ str(len(sinePeriodicity) / numpy.argmax(fftSinTable)) + ' seconds.')
-
-	if node == 'skylabmapper3':
+	# plotting an example
+	if node == 'nutella_node_01':
 		plot.plot(sinePeriodicity)
 		plot.title("sine version of periodicityTable")
 		plot.xlabel("seconds (between first and last transmission of node)")
@@ -169,8 +169,8 @@ for node in remainderMethodTimo:
 			periodicityTable.append(1)
 			# skipping packetTransmissions in the same second
 			while packetCount < len(remainderMethodTimo[node]) and \
-					startSecond + secondCount == remainderMethodTimo[node].__getitem__(packetCount).time_stamp:
-				packetCount = packetCount + 1
+				startSecond + secondCount == remainderMethodTimo[node].__getitem__(packetCount).time_stamp:
+					packetCount = packetCount + 1
 		else:
 			# appending 0 to the periodicityTable if no transmission happened at current second
 			periodicityTable.append(0)
@@ -178,6 +178,18 @@ for node in remainderMethodTimo:
 
 	# computing fft for periodicityTable
 	fftPeriodicityTable = numpy.abs(numpy.fft.rfft(periodicityTable))
+
+	# plotting an example
+	if node == 'nutella_node_01':
+		plot.plot(periodicityTable)
+		plot.title("periodicityTable")
+		plot.xlabel("seconds (between first and last transmission of node)")
+		plot.ylabel("transmission")
+		plot.show()
+		plot.plot(fftPeriodicityTable)
+		plot.title("fft on periodicityTable")
+		plot.xlabel("seconds (between first and last transmission of node)")
+		plot.show()
 
 	# converting the provided periodicity-cutoffs to the looked-at node's time domain
 	if timeSpan < UPPER_BOUND_PERIODICITY:
@@ -191,6 +203,9 @@ for node in remainderMethodTimo:
 		lowerBoundFrequency = 1
 	else:
 		lowerBoundFrequency = int(round(timeSpan / LOWER_BOUND_PERIODICITY))
+
+	# print('node \'' + node + '\', lower-bound frequency: ' + str(lowerBoundFrequency) + ', upper-bound frequency: ' +
+	#						str(upperBoundFrequency) + ' @ a lifespan of: ' + str(timeSpan) + 's.')
 
 	# determining the peak frequency using the frequency-cutoff
 	peakFrequencyY = 0
