@@ -12,17 +12,17 @@ import pyproj as proj
 # minimum frequency-peak to number-of-transmissions rate used in Timo's method
 MINIMUM_PEAK_TO_TRANSMISSIONS_RATIO = 0.5
 # following value has to be at least 2 for fft to work properly
-MINIMUM_NO_OF_PACKETS_SENT = 100
+MINIMUM_NO_OF_PACKETS_SENT = 15
 # criterion for filtering out short-living nodes
 # This value must be greater than the upper bound periodicity used for Mostafa's method
 # MINIMUM_LIFESPAN = 2592000 # 30 days in seconds
-# MINIMUM_LIFESPAN = 86400  # 24h in seconds
-MINIMUM_LIFESPAN = 8000  # for testing
+MINIMUM_LIFESPAN = 86400  # 24h in seconds
+# MINIMUM_LIFESPAN = 8000  # for testing
 # periodicity boundaries used for the frequency cutoff in Mostafa's method
 UPPER_BOUND_PERIODICITY = 7200  # 2h in seconds
 LOWER_BOUND_PERIODICITY = 1209600  # 2 weeks in seconds
 # minimum percentage of intervals which have to be successfully checked back in Mostafa's method
-MINIMUM_INTERVAL_PERCENTAGE = 0.8
+MINIMUM_INTERVAL_PERCENTAGE = 0.99
 
 EARTH_RADIUS = 6371000
 
@@ -31,7 +31,7 @@ proj_WGS84 = proj.Proj(init='epsg:4326')
 proj_CH1903 = proj.Proj(init='epsg:21781')  # http://epsg.io/21781
 
 # setting the filename
-filename = "1M.csv"
+filename = "2M.csv"
 
 # defining the center of the city of Zurich and the radius of the cap to be drawn around it
 ZurichLon, ZurichLat = 8.54226, 47.37174
@@ -141,16 +141,16 @@ for node in keptNodesLifespanCheck:
 		print('Node ' + node + ' is most regularly transmitting all '
 								+ str(len(sinePeriodicity) / numpy.argmax(fftSinTable)) + ' seconds.')
 	# plotting an example
-	if node == 'nutella_node_01':
-		plot.plot(sinePeriodicity)
-		plot.title("sine version of periodicityTable")
-		plot.xlabel("seconds (between first and last transmission of node)")
-		plot.ylabel("sine wave, one full period between two transmissions")
-		plot.show()
-		plot.plot(fftSinTable)
-		plot.title("fft on sinePeriodicity")
-		plot.xlabel("seconds (between first and last transmission of node)")
-		plot.show()
+	# if node == 'nutella_node_01':
+	# 	plot.plot(sinePeriodicity)
+	# 	plot.title("sine version of periodicityTable")
+	# 	plot.xlabel("seconds (between first and last transmission of node)")
+	# 	plot.ylabel("sine wave, one full period between two transmissions")
+	# 	plot.show()
+	# 	plot.plot(fftSinTable)
+	# 	plot.title("fft on sinePeriodicity")
+	# 	plot.xlabel("seconds (between first and last transmission of node)")
+	# 	plot.show()
 
 # filtering after Mostafa's method
 for node in remainderMethodTimo:
@@ -180,16 +180,16 @@ for node in remainderMethodTimo:
 	fftPeriodicityTable = numpy.abs(numpy.fft.rfft(periodicityTable))
 
 	# plotting an example
-	if node == 'nutella_node_01':
-		plot.plot(periodicityTable)
-		plot.title("periodicityTable")
-		plot.xlabel("seconds (between first and last transmission of node)")
-		plot.ylabel("transmission")
-		plot.show()
-		plot.plot(fftPeriodicityTable)
-		plot.title("fft on periodicityTable")
-		plot.xlabel("seconds (between first and last transmission of node)")
-		plot.show()
+	# if node == 'nutella_node_01':
+	# 	plot.plot(periodicityTable)
+	# 	plot.title("periodicityTable")
+	# 	plot.xlabel("seconds (between first and last transmission of node)")
+	# 	plot.ylabel("transmission")
+	# 	plot.show()
+	# 	plot.plot(fftPeriodicityTable)
+	# 	plot.title("fft on periodicityTable")
+	# 	plot.xlabel("seconds (between first and last transmission of node)")
+	# 	plot.show()
 
 	# converting the provided periodicity-cutoffs to the looked-at node's time domain
 	if timeSpan < UPPER_BOUND_PERIODICITY:
