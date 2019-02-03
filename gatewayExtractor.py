@@ -39,8 +39,10 @@ with open('gwData.json', 'r') as data_file:
 				lat = v['location']['latitude']
 				x, y = proj.transform(proj_WGS84, proj_CH1903, lon, lat)
 				x, y = x - offsetX, y - offsetY
-				if 'description' in v:
-					print('GW description: ' + v['description'] + '; x: ' + str(x) + ', y: ' + str(y))
-				else:
-					print('GW description: [unknown description]: ' + '; x: ' + str(x) + ', y: ' + str(y))
+				# if 'description' in v:
+				# 	print('GW description: ' + v['description'] + '; x: ' + str(x) + ', y: ' + str(y))
+				# else:
+				# 	print('GW description: [unknown description]: ' + '; x: ' + str(x) + ', y: ' + str(y))
+				print('  gatewayPositions.push_back(Vector (' + str(x) + ', ' + str(y) + ", 0.0));")
+
 

@@ -110,6 +110,18 @@ for node in nodeDict:
 	else:
 		keptNodesLifespanCheck[node] = nodeDict[node]
 
+# building the statistical periodicity table & function
+periodicityDistribution = []
+for i in range(0, 334):
+	periodicityDistribution.append(0)
+
+
+def register_periodicity(p):
+	if UPPER_BOUND_PERIODICITY <= p < LOWER_BOUND_PERIODICITY:
+		index = (p-7200) // 3600
+		periodicityDistribution[int(index)] += 1
+
+
 # filtering after Timo's method (sine period between transmissions, determine strong single frequencies)
 for node in keptNodesLifespanCheck:
 	# building the sine list
@@ -138,10 +150,14 @@ for node in keptNodesLifespanCheck:
 	else:
 		keptNodesMethodTimo[node] = keptNodesLifespanCheck[node]
 		# printing the peak periodicity (by converting the found peak frequency)
+		singularPeriodicityPeak = len(sinePeriodicity) / numpy.argmax(fftSinTable)
+
 		print('Node ' + node + ' is most regularly transmitting all '
-								+ str(len(sinePeriodicity) / numpy.argmax(fftSinTable)) + ' seconds.')
+								+ str(singularPeriodicityPeak) + ' seconds.')
+		register_periodicity(singularPeriodicityPeak)
+
 	# plotting an example
-	# if node == 'nutella_node_01':
+	# if node == 'sodaq':
 	# 	plot.plot(sinePeriodicity)
 	# 	plot.title("sine version of periodicityTable")
 	# 	plot.xlabel("seconds (between first and last transmission of node)")
@@ -240,6 +256,7 @@ for node in remainderMethodTimo:
 		print('Node ' + node + ' has been verified to be transmitting regularly all '
 								+ str(peakPeriodicity) + ' seconds.')
 		keptNodesMethodMostafa[node] = remainderMethodTimo[node]
+		register_periodicity(peakPeriodicity)
 	else:
 		print('Failing Mostafa\'s method: ' + node + ' (reason: intervals/peakFrequency-ratio too low.')
 		remainderMethodMostafa[node] = remainderMethodTimo[node]
@@ -260,7 +277,8 @@ for node in keptNodesMethodTimo:
 	lat = keptNodesMethodTimo[node].__getitem__(0).__getattribute__('lat')
 	x, y = proj.transform(proj_WGS84, proj_CH1903, lon, lat)
 	x, y = x - offsetX, y - offsetY
-	print(node + ' x: ' + str(x) + ', y: ' + str(y) + "; number of packets: " + str(len(keptNodesMethodTimo[node])))
+	# print(node + ' x: ' + str(x) + ', y: ' + str(y) + "; number of packets: " + str(len(keptNodesMethodTimo[node])))
+	print('  positionAllocEd->Add (Vector (' + str(x) + ', ' + str(y) + ", 0.0));")
 
 
 print('\nConsiderable nodes sending frequently at several periodicities:')
@@ -269,8 +287,16 @@ for node in keptNodesMethodMostafa:
 	lat = keptNodesMethodMostafa[node].__getitem__(0).__getattribute__('lat')
 	x, y = proj.transform(proj_WGS84, proj_CH1903, lon, lat)
 	x, y = x - offsetX, y - offsetY
-	print(node + ' x: ' + str(x) + ', y: ' + str(y) + "; number of packets: " + str(len(keptNodesMethodMostafa[node])))
+	# print(node + ' x: ' + str(x) + ', y: ' + str(y) + "; number of packets: " + str(len(keptNodesMethodMostafa[node])))
+	print('  positionAllocEd->Add (Vector (' + str(x) + ', ' + str(y) + ", 0.0));")
 
+
+# plotting the periodicity distribution
+plot.plot(periodicityDistribution)
+plot.title("periodicityDistribution")
+plot.xlabel("periodicities from 2 h to two weeks, one hour in between two succeeding indices")
+plot.ylabel("number of end devices per periodicity-hour")
+plot.show()
 
 # stopping the timer:
 time_stop = time.clock()
