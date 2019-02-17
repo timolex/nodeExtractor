@@ -27,6 +27,18 @@ ZurichX, ZurichY = proj.transform(proj_WGS84, proj_CH1903, ZurichLon, ZurichLat)
 # calculating the offsets used for normalization of the cartesian coordinate system
 offsetX, offsetY = ZurichX - radius, ZurichY - radius
 
+northWestX, northWestY = (0.5 * radius), (1.5 * radius)
+northEastX, northEastY = (1.5 * radius), (1.5 * radius)
+southWestX, southWestY = (0.5 * radius), (0.5 * radius)
+southEastX, southEastY = (1.5 * radius), (0.5 * radius)
+
+nwNearestX, nwNearestY, nwMinDistance = 0, 0, 100000
+neNearestX, neNearestY, neMinDistance = 0, 0, 100000
+swNearestX, swNearestY, swMinDistance = 0, 0, 100000
+seNearestX, seNearestY, seMinDistance = 0, 0, 100000
+cenNearestX, cenNearestY, cenMinDistance = 0, 0, 100000
+
+
 with open('gwData.json', 'r') as data_file:
 	data = json.load(data_file)
 	for v in data.values():
@@ -39,10 +51,47 @@ with open('gwData.json', 'r') as data_file:
 				lat = v['location']['latitude']
 				x, y = proj.transform(proj_WGS84, proj_CH1903, lon, lat)
 				x, y = x - offsetX, y - offsetY
+
+				tempNwDist = math.sqrt((x-northWestX)**2 + (y-northWestY)**2)
+				tempNeDist = math.sqrt((x-northEastX)**2 + (y-northEastY)**2)
+				tempSwDist = math.sqrt((x-southWestX)**2 + (y-southWestY)**2)
+				tempSeDist = math.sqrt((x-southEastX)**2 + (y-southEastY)**2)
+				tempCenDist = math.sqrt((x-radius)**2 + (y-radius)**2)
+
+				if tempNwDist < nwMinDistance:
+					nwMinDistance = tempNwDist
+					nwNearestX = x
+					nwNearestY = y
+
+				if tempNeDist < neMinDistance:
+					neMinDistance = tempNeDist
+					neNearestX = x
+					neNearestY = y
+
+				if tempSwDist < swMinDistance:
+					swMinDistance = tempSwDist
+					swNearestX = x
+					swNearestY = y
+
+				if tempSeDist < seMinDistance:
+					seMinDistance = tempSeDist
+					seNearestX = x
+					seNearestY = y
+
+				if tempCenDist < cenMinDistance:
+					cenMinDistance = tempCenDist
+					cenNearestX = x
+					cenNearestY = y
+
+
 				# if 'description' in v:
 				# 	print('GW description: ' + v['description'] + '; x: ' + str(x) + ', y: ' + str(y))
 				# else:
 				# 	print('GW description: [unknown description]: ' + '; x: ' + str(x) + ', y: ' + str(y))
-				print('  gatewayPositions.push_back(Vector (' + str(x) + ', ' + str(y) + ", 0.0));")
+				#print('  gatewayPositions.push_back(Vector (' + str(x) + ', ' + str(y) + ", 0.0));")
 
-
+	print('  gatewayPositions.push_back(Vector (' + str(nwNearestX) + ', ' + str(nwNearestY) + ", 0.0));")
+	print('  gatewayPositions.push_back(Vector (' + str(neNearestX) + ', ' + str(neNearestY) + ", 0.0));")
+	print('  gatewayPositions.push_back(Vector (' + str(swNearestX) + ', ' + str(swNearestY) + ", 0.0));")
+	print('  gatewayPositions.push_back(Vector (' + str(seNearestX) + ', ' + str(seNearestY) + ", 0.0));")
+	print('  gatewayPositions.push_back(Vector (' + str(cenNearestX) + ', ' + str(cenNearestY) + ", 0.0));")
