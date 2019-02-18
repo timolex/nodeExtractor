@@ -83,7 +83,6 @@ with open('gwData.json', 'r') as data_file:
 					cenNearestX = x
 					cenNearestY = y
 
-
 				# if 'description' in v:
 				# 	print('GW description: ' + v['description'] + '; x: ' + str(x) + ', y: ' + str(y))
 				# else:
@@ -95,3 +94,10 @@ with open('gwData.json', 'r') as data_file:
 	print('  gatewayPositions.push_back(Vector (' + str(swNearestX) + ', ' + str(swNearestY) + ", 0.0));")
 	print('  gatewayPositions.push_back(Vector (' + str(seNearestX) + ', ' + str(seNearestY) + ", 0.0));")
 	print('  gatewayPositions.push_back(Vector (' + str(cenNearestX) + ', ' + str(cenNearestY) + ", 0.0));")
+
+	print("\ndistances:")
+	print('NW: ', nwMinDistance)
+	print('NE: ', neMinDistance)
+	print('SW: ', swMinDistance)
+	print('SE: ', seMinDistance)
+	print('CEN: ', cenMinDistance)
