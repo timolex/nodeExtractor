@@ -1,11 +1,8 @@
 import csv
-import s2sphere  # https://s2sphere.readthedocs.io/en/latest/index.html
-import math
 import datetime
 import numpy
 import matplotlib.pyplot as plot
 import time
-import pyproj as proj
 
 # general parameters
 
@@ -24,40 +21,15 @@ LOWER_BOUND_PERIODICITY = 1209600  # 2 weeks in seconds
 # minimum percentage of intervals which have to be successfully checked back in Mostafa's method
 MINIMUM_INTERVAL_PERCENTAGE = 0.99
 
-EARTH_RADIUS = 6371000
-
-# setting up projections (according to Coordinate Reference Systems WGS84 (lat.-lon.) and CH1903 (Switzerland))
-proj_WGS84 = proj.Proj(init='epsg:4326')
-proj_CH1903 = proj.Proj(init='epsg:21781')  # http://epsg.io/21781
-
 # setting the filename
-filename = "2M.csv"
-
-# defining the center of the city of Zurich and the radius of the cap to be drawn around it
-ZurichLon, ZurichLat = 8.54226, 47.37174
-centerOfZurich = s2sphere.LatLng.from_degrees(ZurichLat, ZurichLon)
-radius = 10000
-
-# converting the radius into the Angle format
-angleRadius = s2sphere.Angle.from_degrees(360 * radius / (2 * math.pi * EARTH_RADIUS))
-
-# defining the cap
-region = s2sphere.Cap.from_axis_angle(centerOfZurich.to_point(), angleRadius)
-
-# converting Zurich's WGS84-coordinates (EPSG 4326) to CH1903 (EPSG 21781)
-ZurichX, ZurichY = proj.transform(proj_WGS84, proj_CH1903, ZurichLon, ZurichLat)
-
-# calculating the offsets used for normalization of the cartesian coordinate system
-offsetX, offsetY = ZurichX - radius, ZurichY - radius
+filename = "test.csv"
 
 
 class PacketTransmission:
 
-	def __init__(self, trans_id, time_stamp, lat, lon):
+	def __init__(self, trans_id, time_stamp):
 		self.trans_id = trans_id
 		self.time_stamp = time_stamp
-		self.lat = lat
-		self.lon = lon
 
 
 # initializing the dictionary, which will hold all Transmission-objects per key (= nodeaddr)
@@ -74,15 +46,11 @@ with open(filename, 'r', encoding='unicode_escape') as csv_file:
 	next(csv_file)
 
 	for line in csv_reader:
-		# building a temporary point at the lat./lon.-position of the looked-at packet transmission
-		tempPoint = s2sphere.LatLng.from_degrees(float(line[10]), float(line[11])).to_point()
-		# checking, if the point is contained in the defined shape
-		if region.contains(tempPoint):
-			# if for a given nodeaddr no key in nodeDict exists yet, initialize an empty list at this key (line[2])
-			if not (line[2] in nodeDict):
-				nodeDict[line[2]] = []
-			timeStamp = datetime.datetime.strptime(line[1], '%Y-%m-%d %H:%M:%S').timestamp()
-			nodeDict.get(line[2]).append(PacketTransmission(line[0], timeStamp, line[10], line[11]))
+		# if for a given nodeaddr no key in nodeDict exists yet, initialize an empty list at this key (line[2])
+		if not (line[2] in nodeDict):
+			nodeDict[line[2]] = []
+		timeStamp = datetime.datetime.strptime(line[1], '%Y-%m-%d %H:%M:%S').timestamp()
+		nodeDict.get(line[2]).append(PacketTransmission(line[0], timeStamp))
 
 keptNodesLifespanCheck = {}
 shortLivingNodes = {}
@@ -120,6 +88,7 @@ def register_periodicity(p):
 	if UPPER_BOUND_PERIODICITY <= p < LOWER_BOUND_PERIODICITY:
 		index = (p-7200) // 3600
 		periodicityDistribution[int(index)] += 1
+		# print('Registered periodicity: ' + str(p) + ', index = ' + str(index))
 
 
 # filtering after Timo's method (sine period between transmissions, determine strong single frequencies)
@@ -265,38 +234,20 @@ for node in remainderMethodTimo:
 # for node in remainderMethodMostafa: TODO: implementation
 
 
-# printing the number of found end devices in the area
-print("\n# of found suitable end devices in the defined area: " + str(len(keptNodesMethodTimo)
-						+ len(keptNodesMethodMostafa) + len(keptNodesMethodMachineLearning)))
-
-
-# iterating over keptNodesMethodTimo, converting coordinates to epsg:21781-projection
-print('\nConsiderable nodes sending most frequently at one peak periodicity:')
-for node in keptNodesMethodTimo:
-	lon = keptNodesMethodTimo[node].__getitem__(0).__getattribute__('lon')
-	lat = keptNodesMethodTimo[node].__getitem__(0).__getattribute__('lat')
-	x, y = proj.transform(proj_WGS84, proj_CH1903, lon, lat)
-	x, y = x - offsetX, y - offsetY
-	# print(node + ' x: ' + str(x) + ', y: ' + str(y) + "; number of packets: " + str(len(keptNodesMethodTimo[node])))
-	print('  positionAllocEd->Add (Vector (' + str(x) + ', ' + str(y) + ", 0.0));")
-
-
-print('\nConsiderable nodes sending frequently at several periodicities:')
-for node in keptNodesMethodMostafa:
-	lon = keptNodesMethodMostafa[node].__getitem__(0).__getattribute__('lon')
-	lat = keptNodesMethodMostafa[node].__getitem__(0).__getattribute__('lat')
-	x, y = proj.transform(proj_WGS84, proj_CH1903, lon, lat)
-	x, y = x - offsetX, y - offsetY
-	# print(node + ' x: ' + str(x) + ', y: ' + str(y) + "; number of packets: " + str(len(keptNodesMethodMostafa[node])))
-	print('  positionAllocEd->Add (Vector (' + str(x) + ', ' + str(y) + ", 0.0));")
-
-
 # plotting the periodicity distribution
 plot.plot(periodicityDistribution)
 plot.title("periodicityDistribution")
 plot.xlabel("periodicities from 2 h to two weeks, one hour in between two succeeding indices")
 plot.ylabel("number of end devices per periodicity-hour")
 plot.show()
+
+# exporting the periodicity-distribution to .csv
+f = open("periodicities.csv", "w+")
+f.write('periodicityHour,count\n')
+for index, count in enumerate(periodicityDistribution):
+	if count > 0:
+		f.write(str(index) + ',' + str(count) + '\n')
+f.close()
 
 # stopping the timer:
 time_stop = time.clock()
