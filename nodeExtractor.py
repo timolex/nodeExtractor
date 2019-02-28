@@ -22,7 +22,7 @@ LOWER_BOUND_PERIODICITY = 1209600  # 2 weeks in seconds
 MINIMUM_INTERVAL_PERCENTAGE = 0.99
 
 # setting the filename
-filename = "test.csv"
+filename = "15days.csv"
 
 
 class PacketTransmission:
@@ -245,8 +245,7 @@ plot.show()
 f = open("periodicities.csv", "w+")
 f.write('periodicityHour,count\n')
 for index, count in enumerate(periodicityDistribution):
-	if count > 0:
-		f.write(str(index) + ',' + str(count) + '\n')
+	f.write(str(index) + ',' + str(count) + '\n')
 f.close()
 
 # stopping the timer:
