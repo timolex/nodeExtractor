@@ -1,13 +1,32 @@
 import matplotlib.pyplot as plt
 from imageio import imread
+import csv
 
-x = [9782.655684816418, 761.9884992111474, 6515.527137617231, 7930.596178661217, 9795.627437463845, 2547.116770894616]
-y = [16407.83287118317, 12798.042369708477, 13605.91745874213, 11784.030245990027, 10606.133177199517, 6258.487048110168]
+x, y, gwX, gwY = [], [], [], []
+
+with open('coordinatesEDs.csv') as csvFile:
+	readCSV = csv.reader(csvFile, delimiter=',')
+	# skipping the first row
+	next(csvFile)
+
+	for row in readCSV:
+		x.append(float(row[0]))
+		y.append(float(row[1]))
+
+with open('coordinatesGWs.csv') as csvFile:
+	readCSV = csv.reader(csvFile, delimiter=',')
+	# skipping the first row
+	next(csvFile)
+
+	for row in readCSV:
+		gwX.append(float(row[0]))
+		gwY.append(float(row[1]))
 
 img = imread('Zurich.png')
 
 plt.figure(dpi=600)
-plt.scatter(x, y, zorder=1)
+plt.scatter(x, y, zorder=1, color='green')
+plt.scatter(gwX, gwY, zorder=1, color='blue')
 plt.imshow(img, zorder=0, extent=[0.0, 20000.0, 0.0, 20000.0])
 
 plt.savefig("Zurich_TTN_nodes.png")
