@@ -10,4 +10,4 @@ pip install s2sphere datetime matplotlib pyproj
 echo "Please check, if pip did not raise any errors while installing the following dependencies:"
 echo "s2sphere datetime matplotlib pyproj"
 echo "====== NodeExtractor python setup complete! ======"
-echo "Please run '$ python3.6 nodeExtractor.py' to start the application."
+echo "Please run '$ source venv/bin/activate' and '$ python3.6 nodeExtractor.py' to run the application."
