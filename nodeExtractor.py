@@ -7,31 +7,31 @@ import matplotlib.pyplot as plot
 import time
 import pyproj as proj
 
+print('NodeExtractor started...')
+
 # general parameters
 
-# minimum frequency-peak to number-of-transmissions rate used in Timo's method
+# minimum frequency-peak to number-of-transmissions rate used in Timo's (sine) method
 MINIMUM_PEAK_TO_TRANSMISSIONS_RATIO = 0.5
 # following value has to be at least 2 for fft to work properly
 MINIMUM_NO_OF_PACKETS_SENT = 15
 # criterion for filtering out short-living nodes
-# This value must be greater than the upper bound periodicity used for Mostafa's method
-# MINIMUM_LIFESPAN = 2592000 # 30 days in seconds
+# This value must be greater than the upper bound periodicity used for Mostafa's (direct) method
 MINIMUM_LIFESPAN = 86400  # 24h in seconds
-# MINIMUM_LIFESPAN = 8000  # for testing
 # periodicity boundaries used for the frequency cutoff in Mostafa's method
-UPPER_BOUND_PERIODICITY = 7200  # 2h in seconds
-LOWER_BOUND_PERIODICITY = 1209600  # 2 weeks in seconds
+UPPER_BOUND_PERIODICITY = 7200  # 2h in s
+LOWER_BOUND_PERIODICITY = 1209600  # 2 weeks in s
 # minimum percentage of intervals which have to be successfully checked back in Mostafa's method
 MINIMUM_INTERVAL_PERCENTAGE = 0.99
 
-EARTH_RADIUS = 6371000
+EARTH_RADIUS = 6371000  # in m
 
 # setting up projections (according to Coordinate Reference Systems WGS84 (lat.-lon.) and CH1903 (Switzerland))
 proj_WGS84 = proj.Proj(init='epsg:4326')
 proj_CH1903 = proj.Proj(init='epsg:21781')  # http://epsg.io/21781
 
 # setting the filename
-filename = "2M.csv"
+filename = "input.csv"
 
 # defining the center of the city of Zurich and the radius of the cap to be drawn around it
 ZurichLon, ZurichLat = 8.54226, 47.37174
@@ -41,7 +41,7 @@ radius = 10000
 # converting the radius into the Angle format
 angleRadius = s2sphere.Angle.from_degrees(360 * radius / (2 * math.pi * EARTH_RADIUS))
 
-# defining the cap
+# defining the cap around Zurich
 region = s2sphere.Cap.from_axis_angle(centerOfZurich.to_point(), angleRadius)
 
 # converting Zurich's WGS84-coordinates (EPSG 4326) to CH1903 (EPSG 21781)
@@ -122,7 +122,7 @@ def register_periodicity(p):
 		periodicityDistribution[int(index)] += 1
 
 
-# filtering after Timo's method (sine period between transmissions, determine strong single frequencies)
+# filtering after Timo's method (Sine method): sine period between transmissions, determine strong single frequencies)
 for node in keptNodesLifespanCheck:
 	# building the sine list
 	sinePeriodicity = []
@@ -141,12 +141,12 @@ for node in keptNodesLifespanCheck:
 	# computing fft for sinePeriodicity
 	fftSinTable = numpy.abs(numpy.fft.rfft(sinePeriodicity))
 
-	# adding passing nodes to the remainderMethodTimo list, for which fft does not show a clear peak
-	# (e.g., their peak/transmissions-ratio is too low)
+	# adding passing nodes to the remainderMethodTimo list, for which FFT does not show a clear peak
+	# (i.e., their peak/transmissions-ratio is too low)
 	ratio = max(fftSinTable) / (len(fftSinTable))
 	if ratio < MINIMUM_PEAK_TO_TRANSMISSIONS_RATIO:
 		remainderMethodTimo[node] = keptNodesLifespanCheck[node]
-		print('Failing Timo\'s method: ' + node + ' (reason: peak/transmissions-ratio too low: ' + str(ratio) + ')')
+		print('Failing sine method: ' + node + ' (reason: peak/transmissions-ratio too low: ' + str(ratio) + ')')
 	else:
 		keptNodesMethodTimo[node] = keptNodesLifespanCheck[node]
 		# printing the peak periodicity (by converting the found peak frequency)
@@ -156,19 +156,8 @@ for node in keptNodesLifespanCheck:
 								+ str(singularPeriodicityPeak) + ' seconds.')
 		register_periodicity(singularPeriodicityPeak)
 
-	# plotting an example
-	# if node == 'sodaq':
-	# 	plot.plot(sinePeriodicity)
-	# 	plot.title("sine version of periodicityTable")
-	# 	plot.xlabel("seconds (between first and last transmission of node)")
-	# 	plot.ylabel("sine wave, one full period between two transmissions")
-	# 	plot.show()
-	# 	plot.plot(fftSinTable)
-	# 	plot.title("fft on sinePeriodicity")
-	# 	plot.xlabel("seconds (between first and last transmission of node)")
-	# 	plot.show()
 
-# filtering after Mostafa's method
+# filtering after Mostafa's method (Direct method)
 for node in remainderMethodTimo:
 	timeSpan = remainderMethodTimo[node].__getitem__(len(remainderMethodTimo[node]) - 1).time_stamp \
 					- remainderMethodTimo[node].__getitem__(0).time_stamp
@@ -192,20 +181,8 @@ for node in remainderMethodTimo:
 			periodicityTable.append(0)
 		secondCount = secondCount + 1
 
-	# computing fft for periodicityTable
+	# computing FFT for periodicityTable
 	fftPeriodicityTable = numpy.abs(numpy.fft.rfft(periodicityTable))
-
-	# plotting an example
-	# if node == 'nutella_node_01':
-	# 	plot.plot(periodicityTable)
-	# 	plot.title("periodicityTable")
-	# 	plot.xlabel("seconds (between first and last transmission of node)")
-	# 	plot.ylabel("transmission")
-	# 	plot.show()
-	# 	plot.plot(fftPeriodicityTable)
-	# 	plot.title("fft on periodicityTable")
-	# 	plot.xlabel("seconds (between first and last transmission of node)")
-	# 	plot.show()
 
 	# converting the provided periodicity-cutoffs to the looked-at node's time domain
 	if timeSpan < UPPER_BOUND_PERIODICITY:
@@ -219,9 +196,6 @@ for node in remainderMethodTimo:
 		lowerBoundFrequency = 1
 	else:
 		lowerBoundFrequency = int(round(timeSpan / LOWER_BOUND_PERIODICITY))
-
-	# print('node \'' + node + '\', lower-bound frequency: ' + str(lowerBoundFrequency) + ', upper-bound frequency: ' +
-	#						str(upperBoundFrequency) + ' @ a lifespan of: ' + str(timeSpan) + 's.')
 
 	# determining the peak frequency using the frequency-cutoff
 	peakFrequencyY = 0
@@ -258,11 +232,8 @@ for node in remainderMethodTimo:
 		keptNodesMethodMostafa[node] = remainderMethodTimo[node]
 		register_periodicity(peakPeriodicity)
 	else:
-		print('Failing Mostafa\'s method: ' + node + ' (reason: intervals/peakFrequency-ratio too low.')
+		print('Failing direct method: ' + node + ' (reason: intervals/peakFrequency-ratio too low.')
 		remainderMethodMostafa[node] = remainderMethodTimo[node]
-
-# filtering after machine learning methods
-# for node in remainderMethodMostafa: TODO: implementation
 
 
 # printing the number of found end devices in the area
@@ -270,31 +241,33 @@ print("\n# of found suitable end devices in the defined area: " + str(len(keptNo
 						+ len(keptNodesMethodMostafa) + len(keptNodesMethodMachineLearning)))
 
 
+print("Coordinates of determined nodes (in terms of CH1903 Coordinate Reference System):")
+
 # iterating over keptNodesMethodTimo, converting coordinates to epsg:21781-projection
-print('\nConsiderable nodes sending most frequently at one peak periodicity:')
+print('\nConsiderable nodes sending most frequently at one peak periodicity (Sine method):')
 for node in keptNodesMethodTimo:
 	lon = keptNodesMethodTimo[node].__getitem__(0).__getattribute__('lon')
 	lat = keptNodesMethodTimo[node].__getitem__(0).__getattribute__('lat')
 	x, y = proj.transform(proj_WGS84, proj_CH1903, lon, lat)
 	x, y = x - offsetX, y - offsetY
-	# print(node + ' x: ' + str(x) + ', y: ' + str(y) + "; number of packets: " + str(len(keptNodesMethodTimo[node])))
-	print('  positionAllocEd->Add (Vector (' + str(x) + ', ' + str(y) + ", 0.0));")
+	print('node \"' + node + ' X: ' + str(x) + ', Y: ' + str(y) + ". No. of packets: " +
+		  str(len(keptNodesMethodTimo[node])))
 
 
-print('\nConsiderable nodes sending frequently at several periodicities:')
+print('\nConsiderable nodes sending frequently at several periodicities: (Direct method): ')
 for node in keptNodesMethodMostafa:
 	lon = keptNodesMethodMostafa[node].__getitem__(0).__getattribute__('lon')
 	lat = keptNodesMethodMostafa[node].__getitem__(0).__getattribute__('lat')
 	x, y = proj.transform(proj_WGS84, proj_CH1903, lon, lat)
 	x, y = x - offsetX, y - offsetY
-	# print(node + ' x: ' + str(x) + ', y: ' + str(y) + "; number of packets: " + str(len(keptNodesMethodMostafa[node])))
-	print('  positionAllocEd->Add (Vector (' + str(x) + ', ' + str(y) + ", 0.0));")
+	print('node \"' + node + '\": X: ' + str(x) + ', Y: ' + str(y) + ". No. of packets: " +
+		  str(len(keptNodesMethodMostafa[node])))
 
 
 # plotting the periodicity distribution
 plot.plot(periodicityDistribution)
 plot.title("periodicityDistribution")
-plot.xlabel("periodicities from 2 h to two weeks, one hour in between two succeeding indices")
+plot.xlabel("periodicities (2 h to 2 weeks), one hour in between two succeeding indices")
 plot.ylabel("number of end devices per periodicity-hour")
 plot.show()
 
